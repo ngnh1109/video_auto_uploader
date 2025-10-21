@@ -5,19 +5,20 @@ import time
 from tkinter import *
 from tkinter import ttk, filedialog, messagebox
 from uploader import upload_video
-from ai_generator import generate_description
+from ai_generator import generate_description, generate_title # Đã thêm generate_title
 from thumbnail_ai import generate_thumbnail
 
 
 # =============== GIAO DIỆN CHÍNH ===============
 root = Tk()
 root.title("AI Auto Uploader")
-root.geometry("650x580")
+root.geometry("650x700") # Điều chỉnh kích thước cửa sổ
 root.configure(bg="#f8f8f8")
 
 # =============== BIẾN TOÀN CỤC ===============
 accounts = {}
 video_path_var = StringVar()
+title_var = StringVar() # Biến mới cho Tiêu đề
 description_var = StringVar()
 platform_var = StringVar(value="youtube")
 thumbnail_path = None
@@ -49,14 +50,33 @@ def select_video():
     path = filedialog.askopenfilename(title="Chọn video", filetypes=[("MP4 files", "*.mp4")])
     if path:
         video_path_var.set(path)
+        # Đặt tiêu đề mặc định là tên file (đã loại bỏ .mp4)
+        default_title = os.path.basename(path).replace(".mp4", "").replace("_", " ").title()
+        title_var.set(default_title)
+
+def generate_ai_title():
+    """Sinh tiêu đề bằng Gemini AI"""
+    if not video_path_var.get():
+        messagebox.showwarning("Thiếu video", "Hãy chọn video trước.")
+        return
+    
+    # Sử dụng tiêu đề mặc định làm tóm tắt
+    current_title = title_var.get()
+    
+    # Giả sử tên file (hiện tại là title_var) là tóm tắt nội dung
+    new_title = generate_title(current_title) 
+    
+    title_var.set(new_title)
+    messagebox.showinfo("✅ Hoàn tất", "Đã tạo tiêu đề tự động!")
 
 
 def generate_ai_description():
     """Sinh mô tả bằng Gemini AI"""
-    if not video_path_var.get():
-        messagebox.showwarning("Thiếu video", "Hãy chọn video trước.")
+    if not title_var.get():
+        messagebox.showwarning("Thiếu tiêu đề", "Hãy nhập hoặc tạo tiêu đề trước.")
         return
-    title = os.path.basename(video_path_var.get()).replace(".mp4", "")
+    
+    title = title_var.get()
     description = generate_description(title)
     description_var.set(description)
     desc_box.delete("1.0", END)
@@ -69,10 +89,14 @@ def generate_ai_thumbnail():
     if not video_path_var.get():
         messagebox.showwarning("Thiếu video", "Hãy chọn video trước.")
         return
-    title = os.path.basename(video_path_var.get()).replace(".mp4", "")
+    if not title_var.get():
+        messagebox.showwarning("Thiếu tiêu đề", "Hãy nhập hoặc tạo tiêu đề trước.")
+        return
+        
+    title_prompt = title_var.get()
     try:
         global thumbnail_path
-        thumbnail_path = generate_thumbnail(f"thumbnail cho video {title}")
+        thumbnail_path = generate_thumbnail(f"thumbnail cho video {title_prompt}")
         messagebox.showinfo("✅ Thành công", f"Đã tạo thumbnail: {thumbnail_path}")
     except Exception as e:
         messagebox.showerror("❌ Lỗi thumbnail", str(e))
@@ -80,6 +104,10 @@ def generate_ai_thumbnail():
 
 def start_upload():
     """Upload video lên các tài khoản đã chọn, có progress bar"""
+    # Thêm kiểm tra tiêu đề
+    if not title_var.get():
+        messagebox.showwarning("Thiếu tiêu đề", "Vui lòng nhập tiêu đề.")
+        return
     if not video_path_var.get():
         messagebox.showwarning("Thiếu video", "Vui lòng chọn video.")
         return
@@ -100,7 +128,10 @@ def start_upload():
     def upload_task():
         progress_bar["value"] = 0
         progress_label.config(text="Đang tải video...")
+        root.update_idletasks()
         step = 100 / len(selected_indices)
+
+        video_title = title_var.get() # Lấy tiêu đề từ biến mới
 
         for i in selected_indices:
             acc = accounts[platform][i]
@@ -112,11 +143,12 @@ def start_upload():
                     platform,
                     acc,
                     video_path_var.get(),
-                    os.path.basename(video_path_var.get()),
+                    video_title, # Truyền tiêu đề đã tạo
                     description_var.get()
                 )
 
-                for _ in range(10):  # mô phỏng tiến trình
+                # Cập nhật progress bar
+                for _ in range(10): 
                     progress_bar["value"] += step / 10
                     percent_label.config(text=f"{int(progress_bar['value'])}%")
                     root.update_idletasks()
@@ -164,11 +196,19 @@ frame_video.pack(pady=10)
 Entry(frame_video, textvariable=video_path_var, width=50).grid(row=0, column=0, padx=5)
 Button(frame_video, text="🎬 Chọn video", command=select_video).grid(row=0, column=1)
 
-# --- AI ---
+# --- Tiêu đề (Mới) ---
+frame_title = Frame(root, bg="#f8f8f8")
+frame_title.pack(pady=10)
+Label(frame_title, text="Tiêu đề:", bg="#f8f8f8").grid(row=0, column=0, padx=5, sticky=W)
+Entry(frame_title, textvariable=title_var, width=60).grid(row=1, column=0, padx=5, pady=2)
+Button(frame_title, text="✨ Sinh tiêu đề AI", command=generate_ai_title).grid(row=1, column=1, padx=5)
+
+
+# --- AI (Mô tả và Thumbnail) ---
 frame_ai = Frame(root, bg="#f8f8f8")
 frame_ai.pack(pady=10)
-Button(frame_ai, text="✨ Sinh mô tả AI", command=generate_ai_description).grid(row=0, column=0, padx=5)
-Button(frame_ai, text="🖼️ Sinh thumbnail", command=generate_ai_thumbnail).grid(row=0, column=1, padx=5)
+Button(frame_ai, text="📝 Sinh mô tả AI", command=generate_ai_description).grid(row=0, column=0, padx=10)
+Button(frame_ai, text="🖼️ Sinh thumbnail", command=generate_ai_thumbnail).grid(row=0, column=1, padx=10)
 
 # --- Mô tả ---
 frame_desc = Frame(root, bg="#f8f8f8")
