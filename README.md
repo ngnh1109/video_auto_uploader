@@ -17,8 +17,6 @@ Repo này bao gồm các file chính: `main.py`, `ai_generator.py`, `uploader.py
 ## 4. Cài đặt File cần thiết
 ```bash
 pip install -r requirements.txt
-
-```bash
 đã thêm progress bar.
 
 
