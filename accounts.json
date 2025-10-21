@@ -1,7 +1,8 @@
+#MẪU ĐỂ NHẬP TÀI KHOẢN
 {
   "youtube": [
     {
-      "name": "22",
+      "name": "",
       "client_id": "YT_CLIENT_ID",
       "client_secret": "YT_CLIENT_SECRET",
       "access_token": "YT_ACCESS_TOKEN",
@@ -10,7 +11,7 @@
   ],
   "tiktok": [
     {
-      "name": "11",
+      "name": "",
       "client_key": "TT_CLIENT_KEY",
       "client_secret": "TT_CLIENT_SECRET",
       "access_token": "TT_ACCESS_TOKEN",
@@ -18,3 +19,4 @@
     }
   ]
 }
+
