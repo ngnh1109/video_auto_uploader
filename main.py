@@ -1,133 +1,197 @@
-import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
-import json
 import os
+import json
+import threading
+import time
+from tkinter import *
+from tkinter import ttk, filedialog, messagebox
 from uploader import upload_video
 from ai_generator import generate_description
+from thumbnail_ai import generate_thumbnail
 
-ACCOUNTS_FILE = "accounts.json"
 
-# --- Đọc danh sách tài khoản ---
+# =============== GIAO DIỆN CHÍNH ===============
+root = Tk()
+root.title("AI Auto Uploader")
+root.geometry("650x580")
+root.configure(bg="#f8f8f8")
+
+# =============== BIẾN TOÀN CỤC ===============
+accounts = {}
+video_path_var = StringVar()
+description_var = StringVar()
+platform_var = StringVar(value="youtube")
+thumbnail_path = None
+
+
+# =============== HÀM ===============
 def load_accounts():
-    if not os.path.exists(ACCOUNTS_FILE):
-        return {"youtube": [], "tiktok": []}
-    with open(ACCOUNTS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_accounts(data):
-    with open(ACCOUNTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-accounts = load_accounts()
-
-# --- Khởi tạo giao diện ---
-root = tk.Tk()
-root.title("Auto Video Uploader")
-root.geometry("680x600")
-root.resizable(False, False)
-
-# --- Video chọn ---
-tk.Label(root, text="🎬 Chọn video:").pack(pady=(10, 2))
-video_path_var = tk.StringVar()
-tk.Entry(root, textvariable=video_path_var, width=60).pack()
-tk.Button(
-    root,
-    text="Duyệt...",
-    command=lambda: video_path_var.set(filedialog.askopenfilename(filetypes=[("Video", "*.mp4 *.mov *.avi")]))
-).pack(pady=5)
-
-# --- Chọn nền tảng ---
-tk.Label(root, text="🌐 Nền tảng:").pack(pady=(10, 2))
-platform_var = tk.StringVar(value="youtube")
-frame_platform = tk.Frame(root)
-frame_platform.pack()
-tk.Radiobutton(frame_platform, text="YouTube", variable=platform_var, value="youtube").pack(side="left", padx=10)
-tk.Radiobutton(frame_platform, text="TikTok", variable=platform_var, value="tiktok").pack(side="left", padx=10)
-
-# --- Danh sách tài khoản ---
-tk.Label(root, text="👤 Chọn tài khoản:").pack(pady=(10, 2))
-account_var = tk.StringVar()
-account_menu = tk.OptionMenu(root, account_var, [])
-account_menu.pack()
-
-def update_account_list(*_):
-    platform = platform_var.get()
-    acc_list = [acc["name"] for acc in accounts.get(platform, [])]
-    account_var.set(acc_list[0] if acc_list else "")
-    menu = account_menu["menu"]
-    menu.delete(0, "end")
-    for name in acc_list:
-        menu.add_command(label=name, command=lambda n=name: account_var.set(n))
-
-platform_var.trace("w", update_account_list)
-update_account_list()
-
-# --- Thêm tài khoản ---
-def add_account():
-    platform = platform_var.get()
-    name = simpledialog.askstring("Tên tài khoản", f"Nhập tên hiển thị cho tài khoản {platform}:")
-    if not name:
+    """Đọc danh sách tài khoản từ accounts.json"""
+    global accounts
+    if not os.path.exists("accounts.json"):
+        messagebox.showerror("Thiếu file", "Không tìm thấy file accounts.json")
         return
+    with open("accounts.json", "r", encoding="utf-8") as f:
+        accounts = json.load(f)
+    refresh_account_list()
 
-    client_id = simpledialog.askstring("Client ID", "Nhập Client ID:")
-    client_secret = simpledialog.askstring("Client Secret", "Nhập Client Secret:")
 
-    if platform == "youtube":
-        refresh_token = simpledialog.askstring("Refresh Token", "Nhập Refresh Token:")
-        new_acc = {"name": name, "client_id": client_id, "client_secret": client_secret, "refresh_token": refresh_token}
-    else:
-        access_token = simpledialog.askstring("Access Token", "Nhập Access Token:")
-        new_acc = {"name": name, "client_id": client_id, "client_secret": client_secret, "access_token": access_token}
+def refresh_account_list():
+    """Hiển thị danh sách tài khoản theo nền tảng"""
+    account_listbox.delete(0, END)
+    platform = platform_var.get()
+    if platform in accounts:
+        for acc in accounts[platform]:
+            account_listbox.insert(END, acc["name"])
 
-    accounts[platform].append(new_acc)
-    save_accounts(accounts)
-    update_account_list()
-    messagebox.showinfo("Thành công", f"Đã thêm tài khoản {name} cho {platform.capitalize()}")
 
-tk.Button(root, text="➕ Thêm tài khoản", command=add_account).pack(pady=5)
+def select_video():
+    """Chọn file video để upload"""
+    path = filedialog.askopenfilename(title="Chọn video", filetypes=[("MP4 files", "*.mp4")])
+    if path:
+        video_path_var.set(path)
 
-# --- Mô tả video ---
-tk.Label(root, text="📝 Mô tả video:").pack(pady=(10, 2))
-description_text = tk.Text(root, height=8, width=70)
-description_text.pack()
 
-# --- Sinh mô tả bằng Gemini ---
-def generate_ai_desc():
-    video_name = os.path.basename(video_path_var.get())
-    if not video_name:
+def generate_ai_description():
+    """Sinh mô tả bằng Gemini AI"""
+    if not video_path_var.get():
         messagebox.showwarning("Thiếu video", "Hãy chọn video trước.")
         return
-    messagebox.showinfo("Đang tạo", "AI đang sinh mô tả, vui lòng chờ...")
-    desc = generate_description(f"Hãy viết mô tả hấp dẫn cho video có tên: {video_name}")
-    description_text.delete("1.0", tk.END)
-    description_text.insert(tk.END, desc)
+    title = os.path.basename(video_path_var.get()).replace(".mp4", "")
+    description = generate_description(title)
+    description_var.set(description)
+    desc_box.delete("1.0", END)
+    desc_box.insert("1.0", description)
+    messagebox.showinfo("✅ Hoàn tất", "Đã tạo mô tả tự động!")
 
-tk.Button(root, text="✨ Tạo mô tả bằng Gemini AI", command=generate_ai_desc).pack(pady=5)
 
-# --- Upload video ---
+def generate_ai_thumbnail():
+    """Sinh thumbnail bằng Gemini AI"""
+    if not video_path_var.get():
+        messagebox.showwarning("Thiếu video", "Hãy chọn video trước.")
+        return
+    title = os.path.basename(video_path_var.get()).replace(".mp4", "")
+    try:
+        global thumbnail_path
+        thumbnail_path = generate_thumbnail(f"thumbnail cho video {title}")
+        messagebox.showinfo("✅ Thành công", f"Đã tạo thumbnail: {thumbnail_path}")
+    except Exception as e:
+        messagebox.showerror("❌ Lỗi thumbnail", str(e))
+
+
 def start_upload():
-    path = video_path_var.get()
-    if not path:
-        messagebox.showwarning("Lỗi", "Hãy chọn video.")
+    """Upload video lên các tài khoản đã chọn, có progress bar"""
+    if not video_path_var.get():
+        messagebox.showwarning("Thiếu video", "Vui lòng chọn video.")
+        return
+    if not description_var.get():
+        messagebox.showwarning("Thiếu mô tả", "Vui lòng tạo hoặc nhập mô tả.")
         return
 
     platform = platform_var.get()
-    account_name = account_var.get()
-    desc = description_text.get("1.0", tk.END).strip()
-
-    acc_list = accounts.get(platform, [])
-    account = next((a for a in acc_list if a["name"] == account_name), None)
-    if not account:
-        messagebox.showerror("Lỗi", "Không tìm thấy tài khoản.")
+    if platform not in accounts or not accounts[platform]:
+        messagebox.showwarning("Thiếu tài khoản", f"Không có tài khoản cho {platform}.")
         return
 
-    messagebox.showinfo("Đang tải", f"Đang tải lên {platform.capitalize()}...")
-    try:
-        upload_video(platform, account, path, desc)
-        messagebox.showinfo("✅ Thành công", f"Tải video lên {platform.capitalize()} thành công!")
-    except Exception as e:
-        messagebox.showerror("Lỗi", f"Tải lên thất bại:\n{e}")
+    selected_indices = account_listbox.curselection()
+    if not selected_indices:
+        messagebox.showwarning("Chưa chọn tài khoản", "Vui lòng chọn ít nhất một tài khoản.")
+        return
 
-tk.Button(root, text="⬆️ Upload Video", bg="#4CAF50", fg="white", width=20, height=2, command=start_upload).pack(pady=15)
+    def upload_task():
+        progress_bar["value"] = 0
+        progress_label.config(text="Đang tải video...")
+        step = 100 / len(selected_indices)
 
+        for i in selected_indices:
+            acc = accounts[platform][i]
+            try:
+                progress_label.config(text=f"Tải lên {platform} ({acc['name']})...")
+                root.update_idletasks()
+
+                success, msg = upload_video(
+                    platform,
+                    acc,
+                    video_path_var.get(),
+                    os.path.basename(video_path_var.get()),
+                    description_var.get()
+                )
+
+                for _ in range(10):  # mô phỏng tiến trình
+                    progress_bar["value"] += step / 10
+                    percent_label.config(text=f"{int(progress_bar['value'])}%")
+                    root.update_idletasks()
+                    time.sleep(0.3)
+
+                if success:
+                    messagebox.showinfo("✅ Thành công", msg)
+                else:
+                    messagebox.showerror("❌ Lỗi upload", msg)
+
+            except Exception as e:
+                messagebox.showerror("❌ Lỗi", f"Tài khoản {acc['name']}: {e}")
+
+        progress_bar["value"] = 100
+        percent_label.config(text="100%")
+        progress_label.config(text="Hoàn tất ✅")
+        time.sleep(1)
+        progress_bar["value"] = 0
+        percent_label.config(text="")
+        progress_label.config(text="")
+
+    threading.Thread(target=upload_task).start()
+
+
+# =============== GIAO DIỆN ===============
+Label(root, text="AI Auto Uploader", font=("Arial", 18, "bold"), bg="#f8f8f8").pack(pady=10)
+
+# --- Nền tảng ---
+frame_platform = Frame(root, bg="#f8f8f8")
+frame_platform.pack(pady=10)
+Label(frame_platform, text="Nền tảng:", bg="#f8f8f8").grid(row=0, column=0, padx=5)
+OptionMenu(frame_platform, platform_var, "youtube", "tiktok", command=lambda _: refresh_account_list()).grid(row=0, column=1)
+
+# --- Tài khoản ---
+frame_accounts = Frame(root, bg="#f8f8f8")
+frame_accounts.pack(pady=10)
+Label(frame_accounts, text="Tài khoản:", bg="#f8f8f8").pack()
+account_listbox = Listbox(frame_accounts, selectmode=MULTIPLE, width=40, height=5)
+account_listbox.pack()
+Button(frame_accounts, text="🔄 Tải lại", command=load_accounts).pack(pady=4)
+
+# --- Video ---
+frame_video = Frame(root, bg="#f8f8f8")
+frame_video.pack(pady=10)
+Entry(frame_video, textvariable=video_path_var, width=50).grid(row=0, column=0, padx=5)
+Button(frame_video, text="🎬 Chọn video", command=select_video).grid(row=0, column=1)
+
+# --- AI ---
+frame_ai = Frame(root, bg="#f8f8f8")
+frame_ai.pack(pady=10)
+Button(frame_ai, text="✨ Sinh mô tả AI", command=generate_ai_description).grid(row=0, column=0, padx=5)
+Button(frame_ai, text="🖼️ Sinh thumbnail", command=generate_ai_thumbnail).grid(row=0, column=1, padx=5)
+
+# --- Mô tả ---
+frame_desc = Frame(root, bg="#f8f8f8")
+frame_desc.pack(pady=10)
+Label(frame_desc, text="Mô tả:", bg="#f8f8f8").pack()
+desc_box = Text(frame_desc, height=5, width=60)
+desc_box.pack()
+desc_box.bind("<KeyRelease>", lambda e: description_var.set(desc_box.get("1.0", END).strip()))
+
+# --- Progress ---
+frame_progress = Frame(root, bg="#f8f8f8")
+frame_progress.pack(pady=10)
+progress_bar = ttk.Progressbar(frame_progress, orient="horizontal", length=500, mode="determinate")
+progress_bar.pack()
+percent_label = Label(frame_progress, text="", bg="#f8f8f8")
+percent_label.pack()
+progress_label = Label(root, text="", bg="#f8f8f8", font=("Arial", 10))
+progress_label.pack()
+
+# --- Upload ---
+Button(root, text="🚀 Upload video", font=("Arial", 12, "bold"), bg="#4CAF50", fg="white", command=start_upload).pack(pady=15)
+
+
+# --- Khởi động ---
+load_accounts()
 root.mainloop()

@@ -3,7 +3,7 @@ import google.generativeai as genai
 import os
 
 # Lấy key từ biến môi trường (khuyến nghị)
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))  #NHẬP KEY VÀO ĐÂY
+genai.configure(api_key=os.getenv("API_GEMINI_KEY"))  #NHẬP KEY VÀO ĐÂY
 
 def generate_description(video_title: str) -> str:
     """
@@ -24,4 +24,4 @@ def generate_description(video_title: str) -> str:
         return response.text.strip()
     except Exception as e:
         print("Lỗi khi gọi Gemini API:", e)
-        return "Xem ngay video cực thú vị này nhé! #Shorts #AI #Video"
+        return "Xem ngay video cực thú vị này nhé! #Shorts #Video"
