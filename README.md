@@ -5,7 +5,7 @@ Video Auto Uploader là một công cụ Python giúp **tự động tải lên 
 Repo này bao gồm các file chính: `main.py`, `ai_generator.py`, `uploader.py`, và `requirements.txt`.
 
 ## 2. Tính năng  
-- Tạo tiêu đề và mô tả video (qua module `ai_generator.py`)  
+- Tạo tiêu đề , mô tả video và thumbnail (qua module `ai_generator.py`, `thumbnail_ai.py`)  
 - Tải lên video tới nền tảng đích (qua module `uploader.py`)  
 - Giao diện hoặc phương thức gọi đơn giản trong `main.py`  
 - Quản lý dependencies bằng `requirements.txt`
