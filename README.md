@@ -16,9 +16,5 @@ Repo này bao gồm các file chính: `main.py`, `ai_generator.py`, `uploader.py
 
 ## 4. Cài đặt  
 ```bash
-git clone https://github.com/ngocanh11-88/video_auto_uploader.git
-cd video_auto_uploader
 pip install -r requirements.txt
 
-
-dẹt sơ
