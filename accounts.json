@@ -1,0 +1,20 @@
+{
+  "youtube": [
+    {
+      "name": "22",
+      "client_id": "YT_CLIENT_ID",
+      "client_secret": "YT_CLIENT_SECRET",
+      "access_token": "YT_ACCESS_TOKEN",
+      "refresh_token": "YT_REFRESH_TOKEN"
+    }
+  ],
+  "tiktok": [
+    {
+      "name": "11",
+      "client_key": "TT_CLIENT_KEY",
+      "client_secret": "TT_CLIENT_SECRET",
+      "access_token": "TT_ACCESS_TOKEN",
+      "open_id": "TT_OPEN_ID"
+    }
+  ]
+}
