@@ -14,7 +14,7 @@ Repo này bao gồm các file chính: `main.py`, `ai_generator.py`, `uploader.py
 - Python 3.x (được khuyến nghị 3.8+)  
 - Các thư viện trong `requirements.txt`
 
-## 4. Cài đặt  
+## 4. Cài đặt File cần thiết
 ```bash
 pip install -r requirements.txt
 
