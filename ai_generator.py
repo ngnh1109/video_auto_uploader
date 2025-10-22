@@ -38,6 +38,7 @@ def generate_description(video_title: str) -> str:
     cho video có tiêu đề: "{video_title}".
     Yêu cầu:
     - Giọng văn tự nhiên, thân thiện.
+    - Có lời kêu gọi like, share, subscribe.
     - Thêm 3-5 hashtag liên quan.
     """
 
@@ -47,5 +48,4 @@ def generate_description(video_title: str) -> str:
         return response.text.strip()
     except Exception as e:
         print("Lỗi khi gọi Gemini API:", e)
-
         raise Exception(f"Lỗi gọi AI: {e}. Vui lòng kiểm tra lại API Key và kết nối mạng.")

@@ -5,9 +5,9 @@ import time
 from tkinter import *
 from tkinter import ttk, filedialog, messagebox
 from uploader import upload_video
-from ai_generator import generate_description, generate_title # Đã thêm generate_title
-from thumbnail_ai import generate_thumbnail
+from ai_generator import generate_description, generate_title # Giữ lại import cho tiêu đề và mô tả
 
+# Lưu ý: Đã xóa 'from thumbnail_ai import generate_thumbnail' vì file đã bị xóa
 
 # =============== GIAO DIỆN CHÍNH ===============
 root = Tk()
@@ -21,8 +21,7 @@ video_path_var = StringVar()
 title_var = StringVar() # Biến mới cho Tiêu đề
 description_var = StringVar()
 platform_var = StringVar(value="youtube")
-thumbnail_path = None
-
+# Đã xóa 'thumbnail_path = None'
 
 # =============== HÀM ===============
 def load_accounts():
@@ -64,10 +63,12 @@ def generate_ai_title():
     current_title = title_var.get()
     
     # Giả sử tên file (hiện tại là title_var) là tóm tắt nội dung
-    new_title = generate_title(current_title) 
-    
-    title_var.set(new_title)
-    messagebox.showinfo("✅ Hoàn tất", "Đã tạo tiêu đề tự động!")
+    try:
+        new_title = generate_title(current_title) 
+        title_var.set(new_title)
+        messagebox.showinfo("✅ Hoàn tất", "Đã tạo tiêu đề tự động!")
+    except Exception as e:
+        messagebox.showerror("❌ Lỗi AI", str(e))
 
 
 def generate_ai_description():
@@ -77,30 +78,17 @@ def generate_ai_description():
         return
     
     title = title_var.get()
-    description = generate_description(title)
-    description_var.set(description)
-    desc_box.delete("1.0", END)
-    desc_box.insert("1.0", description)
-    messagebox.showinfo("✅ Hoàn tất", "Đã tạo mô tả tự động!")
-
-
-def generate_ai_thumbnail():
-    """Sinh thumbnail bằng Gemini AI"""
-    if not video_path_var.get():
-        messagebox.showwarning("Thiếu video", "Hãy chọn video trước.")
-        return
-    if not title_var.get():
-        messagebox.showwarning("Thiếu tiêu đề", "Hãy nhập hoặc tạo tiêu đề trước.")
-        return
-        
-    title_prompt = title_var.get()
     try:
-        global thumbnail_path
-        thumbnail_path = generate_thumbnail(f"thumbnail cho video {title_prompt}")
-        messagebox.showinfo("✅ Thành công", f"Đã tạo thumbnail: {thumbnail_path}")
+        description = generate_description(title)
+        description_var.set(description)
+        desc_box.delete("1.0", END)
+        desc_box.insert("1.0", description)
+        messagebox.showinfo("✅ Hoàn tất", "Đã tạo mô tả tự động!")
     except Exception as e:
-        messagebox.showerror("❌ Lỗi thumbnail", str(e))
+        messagebox.showerror("❌ Lỗi AI", str(e))
 
+
+# Đã xóa hàm generate_ai_thumbnail()
 
 def start_upload():
     """Upload video lên các tài khoản đã chọn, có progress bar"""
@@ -204,11 +192,12 @@ Entry(frame_title, textvariable=title_var, width=60).grid(row=1, column=0, padx=
 Button(frame_title, text="✨ Sinh tiêu đề AI", command=generate_ai_title).grid(row=1, column=1, padx=5)
 
 
-# --- AI (Mô tả và Thumbnail) ---
+# --- AI (Mô tả) ---
 frame_ai = Frame(root, bg="#f8f8f8")
 frame_ai.pack(pady=10)
+# Đã xóa nút Sinh thumbnail
 Button(frame_ai, text="📝 Sinh mô tả AI", command=generate_ai_description).grid(row=0, column=0, padx=10)
-Button(frame_ai, text="🖼️ Sinh thumbnail", command=generate_ai_thumbnail).grid(row=0, column=1, padx=10)
+
 
 # --- Mô tả ---
 frame_desc = Frame(root, bg="#f8f8f8")

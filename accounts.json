@@ -11,11 +11,10 @@
   "tiktok": [
     {
       "name": "36",
-      "client_key": "",
-      "client_secret": "",
-      "access_token": "",
-      "open_id": ""
+      "client_key": "TT_CLIENT_KEY",
+      "client_secret": "TT_CLIENT_SECRET",
+      "access_token": "TT_ACCESS_TOKEN",
+      "open_id": "TT_OPEN_ID"
     }
   ]
 }
-
