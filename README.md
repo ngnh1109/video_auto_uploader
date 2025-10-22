@@ -6,7 +6,7 @@ Repo này bao gồm các file chính: `main.py`, `ai_generator.py`, `uploader.py
 
 
 ## 2. Tính năng  
-- Tạo tiêu đề , mô tả video và thumbnail (qua module `ai_generator.py`, `thumbnail_ai.py`)  
+- Tạo tiêu đề , mô tả video và thumbnail (qua module `ai_generator.py`)  
 - Tải lên video tới nền tảng đích (qua module `uploader.py`)  
 - Giao diện hoặc phương thức gọi đơn giản trong `main.py` (  Đã thêm progress bar )
 - Quản lý dependencies bằng `requirements.txt`
